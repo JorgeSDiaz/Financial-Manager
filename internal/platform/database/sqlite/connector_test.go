@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,93 +14,117 @@ import (
 )
 
 func TestConnector_Open(t *testing.T) {
+	t.Parallel()
+
 	c := sqlite.NewConnector()
 	ctx := context.Background()
 
-	t.Run("opens valid path and returns pingable db handle", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "test.db")
+	tests := []struct {
+		name            string
+		buildPath       func(t *testing.T) string
+		wantErr         bool
+		wantErrContains string
+		check           func(t *testing.T, path string)
+	}{
+		{
+			name: "opens valid path and returns pingable db handle",
+			buildPath: func(t *testing.T) string {
+				return filepath.Join(t.TempDir(), "test.db")
+			},
+		},
+		{
+			name: "creates nested directories automatically",
+			buildPath: func(t *testing.T) string {
+				return filepath.Join(t.TempDir(), "a", "b", "c", "test.db")
+			},
+			check: func(t *testing.T, path string) {
+				t.Helper()
+				_, err := os.Stat(filepath.Dir(path))
+				assert.NoError(t, err, "nested directories should exist")
+			},
+		},
+		{
+			name: "expands tilde to home directory",
+			buildPath: func(t *testing.T) string {
+				home, err := os.UserHomeDir()
+				require.NoError(t, err)
+				subDir := filepath.Join(home, ".financial-manager-test-connector-open")
+				t.Cleanup(func() { _ = os.RemoveAll(subDir) })
+				return filepath.Join("~", ".financial-manager-test-connector-open", "test.db")
+			},
+			check: func(t *testing.T, path string) {
+				t.Helper()
+				home, err := os.UserHomeDir()
+				require.NoError(t, err)
+				expanded := filepath.Join(home, ".financial-manager-test-connector-open", "test.db")
+				_, err = os.Stat(expanded)
+				assert.NoError(t, err, "expanded path should exist on disk")
+			},
+		},
+		{
+			name: "returns error when parent path is a file not a directory",
+			buildPath: func(t *testing.T) string {
+				blockingFile := filepath.Join(t.TempDir(), "not-a-dir")
+				require.NoError(t, createFile(t, blockingFile))
+				return filepath.Join(blockingFile, "test.db")
+			},
+			wantErr:         true,
+			wantErrContains: "sqlite: create directory",
+		},
+		{
+			name: "returns error when db path is a directory not a file",
+			buildPath: func(t *testing.T) string {
+				dbPath := filepath.Join(t.TempDir(), "test.db")
+				require.NoError(t, os.MkdirAll(dbPath, 0o755))
+				return dbPath
+			},
+			wantErr:         true,
+			wantErrContains: "sqlite: ping",
+		},
+	}
 
-		db, err := c.Open(ctx, path)
-		require.NoError(t, err)
-		require.NotNil(t, db)
-		t.Cleanup(func() { _ = db.Close() })
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-		assert.NoError(t, db.Ping())
-	})
+			path := tc.buildPath(t)
+			db, err := c.Open(ctx, path)
 
-	t.Run("creates nested directories automatically", func(t *testing.T) {
-		dir := t.TempDir()
-		nestedPath := filepath.Join(dir, "a", "b", "c", "test.db")
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, db)
+				assert.Contains(t, err.Error(), tc.wantErrContains)
+				return
+			}
 
-		db, err := c.Open(ctx, nestedPath)
-		require.NoError(t, err)
-		require.NotNil(t, db)
-		t.Cleanup(func() { _ = db.Close() })
+			require.NoError(t, err)
+			require.NotNil(t, db)
+			t.Cleanup(func() { _ = db.Close() })
+			assert.NoError(t, db.Ping())
 
-		_, statErr := os.Stat(filepath.Dir(nestedPath))
-		assert.NoError(t, statErr, "nested directories should exist")
-	})
-
-	t.Run("expands tilde to home directory", func(t *testing.T) {
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
-
-		subDir := filepath.Join(home, ".financial-manager-test-"+t.Name())
-		t.Cleanup(func() { _ = os.RemoveAll(subDir) })
-
-		path := filepath.Join("~", ".financial-manager-test-"+t.Name(), "test.db")
-
-		db, err := c.Open(ctx, path)
-		require.NoError(t, err)
-		require.NotNil(t, db)
-		t.Cleanup(func() { _ = db.Close() })
-
-		expanded := filepath.Join(subDir, "test.db")
-		_, statErr := os.Stat(expanded)
-		assert.NoError(t, statErr, "expanded path should exist")
-	})
-
-	t.Run("returns error when parent path is a file not a directory", func(t *testing.T) {
-		dir := t.TempDir()
-		blockingFile := filepath.Join(dir, "not-a-dir")
-		err := createFile(t, blockingFile)
-		require.NoError(t, err)
-
-		dbPath := filepath.Join(blockingFile, "test.db")
-
-		db, err := c.Open(ctx, dbPath)
-		assert.Nil(t, db)
-		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(), "sqlite: create directory"),
-			"error should contain 'sqlite: create directory', got: %s", err.Error())
-	})
-
-	t.Run("returns error when db path is a directory not a file", func(t *testing.T) {
-		dir := t.TempDir()
-		dbPath := filepath.Join(dir, "test.db")
-		err := os.MkdirAll(dbPath, 0o755)
-		require.NoError(t, err)
-
-		db, err := c.Open(ctx, dbPath)
-		assert.Nil(t, db)
-		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(), "sqlite: ping"),
-			"error should contain 'sqlite: ping', got: %s", err.Error())
-	})
-
-	t.Run("returns error when HOME is not set for tilde expansion", func(t *testing.T) {
-		origHome := os.Getenv("HOME")
-		require.NoError(t, os.Unsetenv("HOME"))
-		t.Cleanup(func() {
-			if origHome != "" {
-				_ = os.Setenv("HOME", origHome)
+			if tc.check != nil {
+				tc.check(t, path)
 			}
 		})
+	}
+}
 
-		db, err := c.Open(ctx, "~/test.db")
-		assert.Nil(t, db)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "sqlite: expand path ~/test.db")
+// TestConnector_Open_TildeExpansion_NoHome verifies that Open returns a descriptive
+// error when HOME is unset and a tilde path is provided. This test runs sequentially
+// (no t.Parallel) because it modifies the HOME environment variable.
+func TestConnector_Open_TildeExpansion_NoHome(t *testing.T) {
+	origHome := os.Getenv("HOME")
+	require.NoError(t, os.Unsetenv("HOME"))
+	t.Cleanup(func() {
+		if origHome != "" {
+			_ = os.Setenv("HOME", origHome)
+		}
 	})
+
+	c := sqlite.NewConnector()
+	db, err := c.Open(context.Background(), "~/test.db")
+
+	require.Error(t, err)
+	assert.Nil(t, db)
+	assert.Contains(t, err.Error(), "sqlite: expand path ~/test.db")
 }

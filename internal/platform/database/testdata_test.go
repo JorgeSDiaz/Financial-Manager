@@ -2,21 +2,13 @@
 package database_test
 
 import (
-	"context"
-	"database/sql"
+	"github.com/financial-manager/api/internal/platform/database"
+	"github.com/financial-manager/api/internal/platform/database/migrator"
+	"github.com/financial-manager/api/internal/platform/database/sqlite"
 )
 
-// failingConnector is a test double that always returns a fixed error from Open.
-type failingConnector struct {
-	err error
-}
-
-// Open always returns the configured error.
-func (f *failingConnector) Open(_ context.Context, _ string) (*sql.DB, error) {
-	return nil, f.err
-}
-
-// buildFailingConnector creates a connector stub that returns err on every Open call.
-func buildFailingConnector(err error) *failingConnector {
-	return &failingConnector{err: err}
+// buildDatabases creates a Databases instance backed by the real sqlite connector
+// and migrator, suitable for happy-path integration tests.
+func buildDatabases() *database.Databases {
+	return database.New(sqlite.NewConnector(), migrator.New())
 }

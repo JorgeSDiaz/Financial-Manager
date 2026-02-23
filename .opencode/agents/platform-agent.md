@@ -69,6 +69,12 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 - All dependencies point inward: platform → application → domain
 - Converts between external data formats (DB rows, JSON, protobuf) and domain types
 
+### Coverage Threshold
+
+- Minimum **80%** per package (adjusted from the global 90% standard)
+- Rationale: platform packages exercise real I/O (SQLite, filesystem, OS env) where certain error paths are only reachable through environmental conditions — injecting them via test doubles would require breaking black-box conventions
+- All packages currently at or above threshold: `database` 100%, `migrator` 93.5%, `sqlite` 95%
+
 ### Testing Patterns
 
 - **Integration tests** with real infrastructure where possible (use testcontainers-go)
