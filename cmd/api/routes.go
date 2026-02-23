@@ -9,14 +9,14 @@ import (
 )
 
 // registerRoutes wires HTTP routes to their handlers and returns the router.
-func registerRoutes(deps *dependencies) http.Handler {
+func registerRoutes(svc *services) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 
-	healthHandler := healthhandler.NewHandler(deps.HealthChecker)
+	healthHandler := healthhandler.NewHandler(svc.HealthChecker)
 
 	r.Get("/health", healthHandler.Check)
 
