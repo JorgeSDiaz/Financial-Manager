@@ -7,15 +7,17 @@ import (
 
 // Config holds all application-level configuration values.
 type Config struct {
-	Port string
-	Env  string
+	Port        string
+	Env         string
+	DatabaseDir string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
 	return &Config{
-		Port: getEnv("PORT", "8080"),
-		Env:  getEnv("ENV", "development"),
+		Port:        getEnv("PORT", "8080"),
+		Env:         getEnv("ENV", "development"),
+		DatabaseDir: getEnv("DB_DIR", "~/FinancialManager/databases/"),
 	}
 }
 

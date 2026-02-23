@@ -1,0 +1,15 @@
+INSERT OR IGNORE INTO categories (id, name, type, is_system) VALUES
+    ('cat-expense-01', 'Alimentación',    'expense', 1),
+    ('cat-expense-02', 'Transporte',      'expense', 1),
+    ('cat-expense-03', 'Vivienda',        'expense', 1),
+    ('cat-expense-04', 'Servicios',       'expense', 1),
+    ('cat-expense-05', 'Salud',           'expense', 1),
+    ('cat-expense-06', 'Educación',       'expense', 1),
+    ('cat-expense-07', 'Ropa',            'expense', 1),
+    ('cat-expense-08', 'Entretenimiento', 'expense', 1),
+    ('cat-expense-09', 'Regalos',         'expense', 1),
+    ('cat-expense-10', 'Otros',           'expense', 1),
+    ('cat-income-01',  'Salario',         'income',  1),
+    ('cat-income-02',  'Inversiones',     'income',  1),
+    ('cat-income-03',  'Regalos',         'income',  1),
+    ('cat-income-04',  'Otros',           'income',  1);
