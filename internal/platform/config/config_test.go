@@ -11,34 +11,46 @@ import (
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
-		name     string
-		env      map[string]string
-		wantPort string
-		wantEnv  string
+		name            string
+		env             map[string]string
+		wantPort        string
+		wantEnv         string
+		wantDatabaseDir string
 	}{
 		{
-			name:     "returns defaults when no env vars set",
-			env:      map[string]string{},
-			wantPort: "8080",
-			wantEnv:  "development",
+			name:            "returns defaults when no env vars set",
+			env:             map[string]string{},
+			wantPort:        "8080",
+			wantEnv:         "development",
+			wantDatabaseDir: "~/FinancialManager/databases/",
 		},
 		{
-			name:     "uses PORT env var when set",
-			env:      map[string]string{"PORT": "9090"},
-			wantPort: "9090",
-			wantEnv:  "development",
+			name:            "uses PORT env var when set",
+			env:             map[string]string{"PORT": "9090"},
+			wantPort:        "9090",
+			wantEnv:         "development",
+			wantDatabaseDir: "~/FinancialManager/databases/",
 		},
 		{
-			name:     "uses ENV env var when set",
-			env:      map[string]string{"ENV": "production"},
-			wantPort: "8080",
-			wantEnv:  "production",
+			name:            "uses ENV env var when set",
+			env:             map[string]string{"ENV": "production"},
+			wantPort:        "8080",
+			wantEnv:         "production",
+			wantDatabaseDir: "~/FinancialManager/databases/",
 		},
 		{
-			name:     "uses both PORT and ENV when set",
-			env:      map[string]string{"PORT": "3000", "ENV": "staging"},
-			wantPort: "3000",
-			wantEnv:  "staging",
+			name:            "uses both PORT and ENV when set",
+			env:             map[string]string{"PORT": "3000", "ENV": "staging"},
+			wantPort:        "3000",
+			wantEnv:         "staging",
+			wantDatabaseDir: "~/FinancialManager/databases/",
+		},
+		{
+			name:            "uses DB_DIR env var when set",
+			env:             map[string]string{"DB_DIR": "/custom/db/path/"},
+			wantPort:        "8080",
+			wantEnv:         "development",
+			wantDatabaseDir: "/custom/db/path/",
 		},
 	}
 
@@ -52,6 +64,7 @@ func TestLoad(t *testing.T) {
 
 			assert.Equal(t, tc.wantPort, cfg.Port)
 			assert.Equal(t, tc.wantEnv, cfg.Env)
+			assert.Equal(t, tc.wantDatabaseDir, cfg.DatabaseDir)
 		})
 	}
 }

@@ -13,15 +13,15 @@ type (
 		Execute(ctx context.Context) (domainhealth.Health, error)
 	}
 
-	// dependencies holds all resolved use cases injected into the HTTP layer.
-	dependencies struct {
+	// services holds all use cases ready to be injected into the HTTP layer.
+	services struct {
 		HealthChecker healthChecker
 	}
 )
 
-// buildDependencies wires all adapters and use cases together.
-func buildDependencies() *dependencies {
-	return &dependencies{
+// buildServices wires all use cases with their dependencies.
+func buildServices() *services {
+	return &services{
 		HealthChecker: health.NewCheckUseCase(),
 	}
 }

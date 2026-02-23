@@ -13,6 +13,9 @@
 bin/
 dist/
 
+# Binaries built in root (e.g. go build ./cmd/api)
+api
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -107,3 +110,6 @@ tags
 
 # Implementation plans — documentos de trabajo internos
 docs/plans/
+
+# SQLite databases — generadas en tiempo de ejecución
+data/

@@ -10,11 +10,13 @@ services:
     environment:
       PORT: "${PORT:-8080}"
       ENV: development
+      DB_DIR: /data/databases/
     volumes:
       # Mount the full project so Air can watch and rebuild on changes.
       # go module cache is kept in a named volume to avoid re-downloading deps.
       - .:/app
       - go-mod-cache:/root/go/pkg/mod
+      - ./data/databases:/data/databases
     # Air needs to write its tmp/ binary inside the container.
     # The named volume shadows the host's tmp/ so the compiled binary
     # stays inside the container (Linux ELF) even on macOS/Windows hosts.

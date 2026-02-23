@@ -2,9 +2,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/financial-manager/api/internal/platform/config"
 )
@@ -12,13 +10,13 @@ import (
 func main() {
 	cfg := config.Load()
 
-	deps := buildDependencies()
-	router := registerRoutes(deps)
-
-	addr := fmt.Sprintf(":%s", cfg.Port)
-	log.Printf("server starting on %s (env=%s)", addr, cfg.Env)
-
-	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatalf("server stopped: %v", err)
+	dbs, err := openDatabases(cfg)
+	if err != nil {
+		log.Fatalf("startup: %v", err)
 	}
+	defer closeDatabases(dbs)
+
+	svc := buildServices()
+
+	run(cfg, svc)
 }
