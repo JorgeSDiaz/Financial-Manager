@@ -14,7 +14,7 @@ bin/
 dist/
 
 # Binaries built in root (e.g. go build ./cmd/api)
-api
+/api
 
 # Test binary, built with `go test -c`
 *.test
