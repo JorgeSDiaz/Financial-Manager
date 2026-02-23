@@ -1,0 +1,25 @@
+# Development docker-compose with Air hot reload.
+# Usage: docker compose -f docker-compose.dev.yml up
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      PORT: "${PORT:-8080}"
+      ENV: development
+    volumes:
+      # Mount the full project so Air can watch and rebuild on changes.
+      # go module cache is kept in a named volume to avoid re-downloading deps.
+      - .:/app
+      - go-mod-cache:/root/go/pkg/mod
+    # Air needs to write its tmp/ binary inside the container.
+    # The named volume shadows the host's tmp/ so the compiled binary
+    # stays inside the container (Linux ELF) even on macOS/Windows hosts.
+    # Remove the tmp volume entry if your host and container share the same OS.
+    #   - api-tmp:/app/tmp
+
+volumes:
+  go-mod-cache:

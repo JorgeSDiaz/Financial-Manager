@@ -1,0 +1,20 @@
+# Development-only Dockerfile with Air for hot reload.
+# NOT for production use.
+FROM golang:1.25-alpine
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Install Air for hot reload
+RUN go install github.com/air-verse/air@latest
+
+# Pre-download Go module dependencies (cached layer)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Source code is mounted as a volume at runtime — no COPY needed here.
+# Air will watch /app and rebuild on changes.
+
+CMD ["air", "-c", ".air.toml"]

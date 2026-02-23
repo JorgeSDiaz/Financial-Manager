@@ -1,0 +1,8 @@
+# Keep the Docker build context small.
+# Source code is mounted at runtime via volumes, not COPY'd in Dockerfile.dev.
+.git
+.opencode
+tmp
+bin
+*.out
+coverage*.out
