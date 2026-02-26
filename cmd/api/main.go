@@ -16,7 +16,7 @@ func main() {
 	}
 	defer closeDatabases(dbs)
 
-	svc := buildServices(dbs.Accounts)
+	svc := buildServices(dbs)
 
 	run(cfg, svc)
 }
