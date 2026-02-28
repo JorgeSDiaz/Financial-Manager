@@ -14,6 +14,12 @@ import (
 	categorylist "github.com/financial-manager/api/cmd/api/handlers/category/list"
 	categoryupdate "github.com/financial-manager/api/cmd/api/handlers/category/update"
 	healthhandler "github.com/financial-manager/api/cmd/api/handlers/health"
+	transactiondelete "github.com/financial-manager/api/cmd/api/handlers/transaction/delete"
+	transactionexpensecreate "github.com/financial-manager/api/cmd/api/handlers/transaction/expense/create"
+	transactionincomecreate "github.com/financial-manager/api/cmd/api/handlers/transaction/income/create"
+	transactionlist "github.com/financial-manager/api/cmd/api/handlers/transaction/list"
+	transactionsummary "github.com/financial-manager/api/cmd/api/handlers/transaction/summary"
+	transactionupdate "github.com/financial-manager/api/cmd/api/handlers/transaction/update"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -25,6 +31,7 @@ func registerRoutes(svc *services) http.Handler {
 	registerHealthRoutes(r, svc)
 	registerAccountRoutes(r, svc)
 	registerCategoryRoutes(r, svc)
+	registerTransactionRoutes(r, svc)
 	return r
 }
 
@@ -70,6 +77,26 @@ func registerCategoryRoutes(r *chi.Mux, svc *services) {
 	r.Route("/api/v1/categories", func(r chi.Router) {
 		r.Post("/", createHandler.Handle)
 		r.Get("/", listHandler.Handle)
+		r.Put("/{id}", updateHandler.Handle)
+		r.Delete("/{id}", deleteHandler.Handle)
+	})
+}
+
+// registerTransactionRoutes mounts the /api/v1/transactions route group.
+func registerTransactionRoutes(r *chi.Mux, svc *services) {
+	incomeCreateHandler := transactionincomecreate.New(svc.Transactions.IncomeCreator)
+	expenseCreateHandler := transactionexpensecreate.New(svc.Transactions.ExpenseCreator)
+	listHandler := transactionlist.New(svc.Transactions.IncomeLister, svc.Transactions.ExpenseLister)
+	summaryHandler := transactionsummary.New(svc.Transactions.Summary)
+	updateHandler := transactionupdate.New(svc.Transactions.Updater)
+	deleteHandler := transactiondelete.New(svc.Transactions.Deleter)
+
+	r.Route("/api/v1/transactions", func(r chi.Router) {
+		r.Post("/incomes", incomeCreateHandler.Handle)
+		r.Post("/expenses", expenseCreateHandler.Handle)
+		r.Get("/incomes", listHandler.HandleIncomes)
+		r.Get("/expenses", listHandler.HandleExpenses)
+		r.Get("/summary", summaryHandler.Handle)
 		r.Put("/{id}", updateHandler.Handle)
 		r.Delete("/{id}", deleteHandler.Handle)
 	})
