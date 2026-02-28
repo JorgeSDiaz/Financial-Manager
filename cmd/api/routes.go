@@ -9,6 +9,10 @@ import (
 	accountget "github.com/financial-manager/api/cmd/api/handlers/account/get"
 	accountlist "github.com/financial-manager/api/cmd/api/handlers/account/list"
 	accountupdate "github.com/financial-manager/api/cmd/api/handlers/account/update"
+	categorycreate "github.com/financial-manager/api/cmd/api/handlers/category/create"
+	categorydelete "github.com/financial-manager/api/cmd/api/handlers/category/delete"
+	categorylist "github.com/financial-manager/api/cmd/api/handlers/category/list"
+	categoryupdate "github.com/financial-manager/api/cmd/api/handlers/category/update"
 	healthhandler "github.com/financial-manager/api/cmd/api/handlers/health"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -20,6 +24,7 @@ func registerRoutes(svc *services) http.Handler {
 	registerMiddlewares(r)
 	registerHealthRoutes(r, svc)
 	registerAccountRoutes(r, svc)
+	registerCategoryRoutes(r, svc)
 	return r
 }
 
@@ -52,5 +57,20 @@ func registerAccountRoutes(r *chi.Mux, svc *services) {
 		r.Put("/{id}", updateHandler.Handle)
 		r.Delete("/{id}", deleteHandler.Handle)
 		r.Get("/{id}/balance", balanceHandler.Handle)
+	})
+}
+
+// registerCategoryRoutes mounts the /api/v1/categories route group.
+func registerCategoryRoutes(r *chi.Mux, svc *services) {
+	createHandler := categorycreate.New(svc.Categories.Creator)
+	listHandler := categorylist.New(svc.Categories.Lister)
+	updateHandler := categoryupdate.New(svc.Categories.Updater)
+	deleteHandler := categorydelete.New(svc.Categories.Deleter)
+
+	r.Route("/api/v1/categories", func(r chi.Router) {
+		r.Post("/", createHandler.Handle)
+		r.Get("/", listHandler.Handle)
+		r.Put("/{id}", updateHandler.Handle)
+		r.Delete("/{id}", deleteHandler.Handle)
 	})
 }
