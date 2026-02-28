@@ -11,6 +11,7 @@ import (
 	categorydelete "github.com/financial-manager/api/internal/application/category/delete"
 	categorylist "github.com/financial-manager/api/internal/application/category/list"
 	categoryupdate "github.com/financial-manager/api/internal/application/category/update"
+	"github.com/financial-manager/api/internal/application/dashboard"
 	"github.com/financial-manager/api/internal/application/health"
 	transactiondelete "github.com/financial-manager/api/internal/application/transaction/delete"
 	expensecreate "github.com/financial-manager/api/internal/application/transaction/expense/create"
@@ -22,6 +23,7 @@ import (
 	"github.com/financial-manager/api/internal/platform/account/sqlite"
 	categorysqlite "github.com/financial-manager/api/internal/platform/category/sqlite"
 	"github.com/financial-manager/api/internal/platform/clock"
+	dashboardsqlite "github.com/financial-manager/api/internal/platform/dashboard/sqlite"
 	"github.com/financial-manager/api/internal/platform/database"
 	"github.com/financial-manager/api/internal/platform/idgen"
 	transactionsqlite "github.com/financial-manager/api/internal/platform/transaction/sqlite"
@@ -62,12 +64,18 @@ type (
 		Summary        *transactionsummary.UseCase
 	}
 
+	// dashboardServices groups all use cases for the dashboard resource.
+	dashboardServices struct {
+		Getter *dashboard.UseCase
+	}
+
 	// services holds all use case groups ready to be injected into the HTTP layer.
 	services struct {
 		Health       healthServices
 		Accounts     accountServices
 		Categories   categoryServices
 		Transactions transactionServices
+		Dashboard    dashboardServices
 	}
 )
 
@@ -76,6 +84,7 @@ func buildServices(dbs *database.Databases) *services {
 	accountRepo := sqlite.NewAccountRepository(dbs.Accounts)
 	categoryRepo := categorysqlite.NewCategoryRepository(dbs.Categories)
 	transactionRepo := transactionsqlite.NewTransactionRepository(dbs.Transactions)
+	dashboardRepo := dashboardsqlite.NewDashboardRepository(dbs.Accounts, dbs.Transactions, dbs.Categories)
 
 	return &services{
 		Health: healthServices{
@@ -103,6 +112,9 @@ func buildServices(dbs *database.Databases) *services {
 			Updater:        transactionupdate.New(transactionRepo, clock.WallClock{}),
 			Deleter:        transactiondelete.New(transactionRepo, clock.WallClock{}),
 			Summary:        transactionsummary.New(transactionRepo),
+		},
+		Dashboard: dashboardServices{
+			Getter: dashboard.New(dashboardRepo),
 		},
 	}
 }

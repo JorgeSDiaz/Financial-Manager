@@ -13,6 +13,7 @@ import (
 	categorydelete "github.com/financial-manager/api/cmd/api/handlers/category/delete"
 	categorylist "github.com/financial-manager/api/cmd/api/handlers/category/list"
 	categoryupdate "github.com/financial-manager/api/cmd/api/handlers/category/update"
+	dashboardhandler "github.com/financial-manager/api/cmd/api/handlers/dashboard"
 	healthhandler "github.com/financial-manager/api/cmd/api/handlers/health"
 	transactiondelete "github.com/financial-manager/api/cmd/api/handlers/transaction/delete"
 	transactionexpensecreate "github.com/financial-manager/api/cmd/api/handlers/transaction/expense/create"
@@ -32,6 +33,7 @@ func registerRoutes(svc *services) http.Handler {
 	registerAccountRoutes(r, svc)
 	registerCategoryRoutes(r, svc)
 	registerTransactionRoutes(r, svc)
+	registerDashboardRoutes(r, svc)
 	return r
 }
 
@@ -100,4 +102,10 @@ func registerTransactionRoutes(r *chi.Mux, svc *services) {
 		r.Put("/{id}", updateHandler.Handle)
 		r.Delete("/{id}", deleteHandler.Handle)
 	})
+}
+
+// registerDashboardRoutes mounts the /api/v1/dashboard endpoint.
+func registerDashboardRoutes(r *chi.Mux, svc *services) {
+	dashboardHandler := dashboardhandler.New(svc.Dashboard.Getter)
+	r.Get("/api/v1/dashboard", dashboardHandler.Handle)
 }
