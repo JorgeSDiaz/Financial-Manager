@@ -14,6 +14,7 @@ import (
 	"github.com/financial-manager/api/internal/application/dashboard"
 	appexport "github.com/financial-manager/api/internal/application/export"
 	"github.com/financial-manager/api/internal/application/health"
+	"github.com/financial-manager/api/internal/application/pdfexport"
 	transactiondelete "github.com/financial-manager/api/internal/application/transaction/delete"
 	expensecreate "github.com/financial-manager/api/internal/application/transaction/expense/create"
 	expenselist "github.com/financial-manager/api/internal/application/transaction/expense/list"
@@ -73,7 +74,8 @@ type (
 
 	// exportServices groups all use cases for the export resource.
 	exportServices struct {
-		Exporter *appexport.UseCase
+		Exporter    *appexport.UseCase
+		PDFExporter *pdfexport.UseCase
 	}
 
 	// services holds all use case groups ready to be injected into the HTTP layer.
@@ -126,7 +128,8 @@ func buildServices(dbs *database.Databases) *services {
 			Getter: dashboard.New(dashboardRepo),
 		},
 		Export: exportServices{
-			Exporter: appexport.New(exportRepo),
+			Exporter:    appexport.New(exportRepo),
+			PDFExporter: pdfexport.New(exportRepo),
 		},
 	}
 }
