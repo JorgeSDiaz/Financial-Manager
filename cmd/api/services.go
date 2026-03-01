@@ -11,7 +11,10 @@ import (
 	categorydelete "github.com/financial-manager/api/internal/application/category/delete"
 	categorylist "github.com/financial-manager/api/internal/application/category/list"
 	categoryupdate "github.com/financial-manager/api/internal/application/category/update"
+	"github.com/financial-manager/api/internal/application/dashboard"
+	appexport "github.com/financial-manager/api/internal/application/export"
 	"github.com/financial-manager/api/internal/application/health"
+	"github.com/financial-manager/api/internal/application/pdfexport"
 	transactiondelete "github.com/financial-manager/api/internal/application/transaction/delete"
 	expensecreate "github.com/financial-manager/api/internal/application/transaction/expense/create"
 	expenselist "github.com/financial-manager/api/internal/application/transaction/expense/list"
@@ -22,7 +25,9 @@ import (
 	"github.com/financial-manager/api/internal/platform/account/sqlite"
 	categorysqlite "github.com/financial-manager/api/internal/platform/category/sqlite"
 	"github.com/financial-manager/api/internal/platform/clock"
+	dashboardsqlite "github.com/financial-manager/api/internal/platform/dashboard/sqlite"
 	"github.com/financial-manager/api/internal/platform/database"
+	exportsqlite "github.com/financial-manager/api/internal/platform/export/sqlite"
 	"github.com/financial-manager/api/internal/platform/idgen"
 	transactionsqlite "github.com/financial-manager/api/internal/platform/transaction/sqlite"
 )
@@ -62,12 +67,25 @@ type (
 		Summary        *transactionsummary.UseCase
 	}
 
+	// dashboardServices groups all use cases for the dashboard resource.
+	dashboardServices struct {
+		Getter *dashboard.UseCase
+	}
+
+	// exportServices groups all use cases for the export resource.
+	exportServices struct {
+		Exporter    *appexport.UseCase
+		PDFExporter *pdfexport.UseCase
+	}
+
 	// services holds all use case groups ready to be injected into the HTTP layer.
 	services struct {
 		Health       healthServices
 		Accounts     accountServices
 		Categories   categoryServices
 		Transactions transactionServices
+		Dashboard    dashboardServices
+		Export       exportServices
 	}
 )
 
@@ -76,6 +94,8 @@ func buildServices(dbs *database.Databases) *services {
 	accountRepo := sqlite.NewAccountRepository(dbs.Accounts)
 	categoryRepo := categorysqlite.NewCategoryRepository(dbs.Categories)
 	transactionRepo := transactionsqlite.NewTransactionRepository(dbs.Transactions)
+	dashboardRepo := dashboardsqlite.NewDashboardRepository(dbs.Accounts, dbs.Transactions, dbs.Categories)
+	exportRepo := exportsqlite.NewExportRepository(dbs.Accounts, dbs.Categories, dbs.Transactions)
 
 	return &services{
 		Health: healthServices{
@@ -103,6 +123,13 @@ func buildServices(dbs *database.Databases) *services {
 			Updater:        transactionupdate.New(transactionRepo, clock.WallClock{}),
 			Deleter:        transactiondelete.New(transactionRepo, clock.WallClock{}),
 			Summary:        transactionsummary.New(transactionRepo),
+		},
+		Dashboard: dashboardServices{
+			Getter: dashboard.New(dashboardRepo),
+		},
+		Export: exportServices{
+			Exporter:    appexport.New(exportRepo),
+			PDFExporter: pdfexport.New(exportRepo),
 		},
 	}
 }

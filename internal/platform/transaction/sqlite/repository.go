@@ -213,6 +213,33 @@ func (r *TransactionRepository) ListByType(ctx context.Context, tType domaintran
 	return transactions, nil
 }
 
+// ListRecent returns the most recent active transactions up to the limit.
+func (r *TransactionRepository) ListRecent(ctx context.Context, limit int) ([]domaintransaction.Transaction, error) {
+	const q = `SELECT id, account_id, category_id, type, amount, description, date, is_active, created_at, updated_at
+		FROM transactions WHERE is_active = 1 ORDER BY date DESC LIMIT ?`
+
+	rows, err := r.db.QueryContext(ctx, q, limit)
+	if err != nil {
+		return nil, fmt.Errorf("transaction sqlite: list recent: %w", err)
+	}
+	defer rows.Close()
+
+	transactions := make([]domaintransaction.Transaction, 0)
+	for rows.Next() {
+		t, err := scanTransaction(rows)
+		if err != nil {
+			return nil, fmt.Errorf("transaction sqlite: list recent scan: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("transaction sqlite: list recent rows: %w", err)
+	}
+
+	return transactions, nil
+}
+
 // scanner abstracts *sql.Row and *sql.Rows for the shared scanTransaction helper.
 type scanner interface {
 	Scan(dest ...any) error
