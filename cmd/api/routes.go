@@ -14,6 +14,7 @@ import (
 	categorylist "github.com/financial-manager/api/cmd/api/handlers/category/list"
 	categoryupdate "github.com/financial-manager/api/cmd/api/handlers/category/update"
 	dashboardhandler "github.com/financial-manager/api/cmd/api/handlers/dashboard"
+	exporthandler "github.com/financial-manager/api/cmd/api/handlers/export"
 	healthhandler "github.com/financial-manager/api/cmd/api/handlers/health"
 	transactiondelete "github.com/financial-manager/api/cmd/api/handlers/transaction/delete"
 	transactionexpensecreate "github.com/financial-manager/api/cmd/api/handlers/transaction/expense/create"
@@ -34,6 +35,7 @@ func registerRoutes(svc *services) http.Handler {
 	registerCategoryRoutes(r, svc)
 	registerTransactionRoutes(r, svc)
 	registerDashboardRoutes(r, svc)
+	registerExportRoutes(r, svc)
 	return r
 }
 
@@ -108,4 +110,11 @@ func registerTransactionRoutes(r *chi.Mux, svc *services) {
 func registerDashboardRoutes(r *chi.Mux, svc *services) {
 	dashboardHandler := dashboardhandler.New(svc.Dashboard.Getter)
 	r.Get("/api/v1/dashboard", dashboardHandler.Handle)
+}
+
+// registerExportRoutes mounts the /api/v1/export endpoints.
+func registerExportRoutes(r *chi.Mux, svc *services) {
+	exportHandler := exporthandler.New(svc.Export.Exporter, svc.Export.Exporter)
+	r.Get("/api/v1/export/csv", exportHandler.HandleCSV)
+	r.Get("/api/v1/export/json", exportHandler.HandleJSON)
 }

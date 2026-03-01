@@ -12,6 +12,7 @@ import (
 	categorylist "github.com/financial-manager/api/internal/application/category/list"
 	categoryupdate "github.com/financial-manager/api/internal/application/category/update"
 	"github.com/financial-manager/api/internal/application/dashboard"
+	appexport "github.com/financial-manager/api/internal/application/export"
 	"github.com/financial-manager/api/internal/application/health"
 	transactiondelete "github.com/financial-manager/api/internal/application/transaction/delete"
 	expensecreate "github.com/financial-manager/api/internal/application/transaction/expense/create"
@@ -25,6 +26,7 @@ import (
 	"github.com/financial-manager/api/internal/platform/clock"
 	dashboardsqlite "github.com/financial-manager/api/internal/platform/dashboard/sqlite"
 	"github.com/financial-manager/api/internal/platform/database"
+	exportsqlite "github.com/financial-manager/api/internal/platform/export/sqlite"
 	"github.com/financial-manager/api/internal/platform/idgen"
 	transactionsqlite "github.com/financial-manager/api/internal/platform/transaction/sqlite"
 )
@@ -69,6 +71,11 @@ type (
 		Getter *dashboard.UseCase
 	}
 
+	// exportServices groups all use cases for the export resource.
+	exportServices struct {
+		Exporter *appexport.UseCase
+	}
+
 	// services holds all use case groups ready to be injected into the HTTP layer.
 	services struct {
 		Health       healthServices
@@ -76,6 +83,7 @@ type (
 		Categories   categoryServices
 		Transactions transactionServices
 		Dashboard    dashboardServices
+		Export       exportServices
 	}
 )
 
@@ -85,6 +93,7 @@ func buildServices(dbs *database.Databases) *services {
 	categoryRepo := categorysqlite.NewCategoryRepository(dbs.Categories)
 	transactionRepo := transactionsqlite.NewTransactionRepository(dbs.Transactions)
 	dashboardRepo := dashboardsqlite.NewDashboardRepository(dbs.Accounts, dbs.Transactions, dbs.Categories)
+	exportRepo := exportsqlite.NewExportRepository(dbs.Accounts, dbs.Categories, dbs.Transactions)
 
 	return &services{
 		Health: healthServices{
@@ -115,6 +124,9 @@ func buildServices(dbs *database.Databases) *services {
 		},
 		Dashboard: dashboardServices{
 			Getter: dashboard.New(dashboardRepo),
+		},
+		Export: exportServices{
+			Exporter: appexport.New(exportRepo),
 		},
 	}
 }
