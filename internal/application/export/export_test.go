@@ -85,6 +85,51 @@ func TestUseCase_ExportCSV(t *testing.T) {
 			filters: export.CSVFilters{},
 			wantCSV: "date,type,amount,category,account,description\n2026-02-28,expense,50.00,Uncategorized,Unknown,Groceries\n",
 		},
+		{
+			name: "filters by income type",
+			repo: buildMockRepoForCSVWithType(
+				[]domainaccount.Account{{ID: "acc-1", Name: "Banco"}},
+				[]domaincategory.Category{},
+				[]domaintransaction.Transaction{
+					buildIncome("tx-1", 1000.00, "acc-1", "Salary"),
+				},
+				nil,
+				"income",
+			),
+			filters: export.CSVFilters{Type: "income"},
+			wantCSV: "date,type,amount,category,account,description\n2026-02-28,income,1000.00,Income,Banco,Salary\n",
+		},
+		{
+			name: "filters by expense type",
+			repo: buildMockRepoForCSVWithType(
+				[]domainaccount.Account{{ID: "acc-1", Name: "Banco"}},
+				[]domaincategory.Category{{ID: "cat-1", Name: "Food"}},
+				[]domaintransaction.Transaction{
+					buildExpense("tx-1", 50.00, "acc-1", "cat-1", "Groceries"),
+				},
+				nil,
+				"expense",
+			),
+			filters: export.CSVFilters{Type: "expense"},
+			wantCSV: "date,type,amount,category,account,description\n2026-02-28,expense,50.00,Food,Banco,Groceries\n",
+		},
+		{
+			name: "exports empty CSV when no transactions",
+			repo: buildMockRepoForCSV(
+				[]domainaccount.Account{{ID: "acc-1", Name: "Banco"}},
+				[]domaincategory.Category{},
+				[]domaintransaction.Transaction{},
+				nil,
+			),
+			filters: export.CSVFilters{},
+			wantCSV: "date,type,amount,category,account,description\n",
+		},
+		{
+			name:    "categories error is propagated",
+			repo:    buildMockRepoForCSVWithCategoriesError(),
+			filters: export.CSVFilters{},
+			wantErr: fmt.Errorf("export csv: %w", errors.New("categories error")),
+		},
 	}
 
 	for _, tc := range tests {
@@ -145,6 +190,31 @@ func TestUseCase_ExportJSON(t *testing.T) {
 			name:    "repository error is propagated",
 			repo:    buildMockRepoForJSON(nil, nil, nil, nil, errors.New("db error")),
 			wantErr: fmt.Errorf("export json: %w", errors.New("db error")),
+		},
+		{
+			name:    "categories error is propagated",
+			repo:    buildMockRepoForJSONWithCategoriesError(),
+			wantErr: fmt.Errorf("export json: %w", errors.New("categories error")),
+		},
+		{
+			name:    "expenses error is propagated",
+			repo:    buildMockRepoForJSONWithExpensesError(),
+			wantErr: fmt.Errorf("export json: %w", errors.New("expenses error")),
+		},
+		{
+			name: "exports empty JSON with empty data",
+			repo: buildMockRepoForJSON(
+				[]domainaccount.Account{},
+				[]domaincategory.Category{},
+				[]domaintransaction.Transaction{},
+				[]domaintransaction.Transaction{},
+				nil,
+			),
+			wantContains: []string{
+				`"accounts": []`,
+				`"categories": []`,
+				`"transactions": []`,
+			},
 		},
 	}
 
