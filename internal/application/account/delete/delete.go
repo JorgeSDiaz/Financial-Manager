@@ -25,7 +25,6 @@ func (uc *UseCase) Execute(ctx context.Context, id string) error {
 		return errors.New("account ID is required")
 	}
 
-	// TODO(M4): HasTransactions always returns false in M2; wire real check in M4.
 	hasTx, err := uc.repo.HasTransactions(ctx, id)
 	if err != nil {
 		return fmt.Errorf("delete account: %w", err)
