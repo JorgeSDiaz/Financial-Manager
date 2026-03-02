@@ -1,0 +1,25 @@
+run:
+  timeout: 5m
+  tests: false
+
+linters-settings:
+  gocyclo:
+    min-complexity: 10
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+    - path: mocks/
+      linters:
+        - errcheck
+    - path: testdata
+      linters:
+        - errcheck
+    - path: handlers/
+      linters:
+        - errcheck
+    - path: platform/
+      linters:
+        - errcheck
