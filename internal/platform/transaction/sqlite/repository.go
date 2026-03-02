@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -32,7 +33,11 @@ func (r *TransactionRepository) Create(ctx context.Context, t domaintransaction.
 	if err != nil {
 		return fmt.Errorf("transaction sqlite: begin: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			log.Printf("rollback: %v", err)
+		}
+	}()
 
 	const insertQ = `INSERT INTO transactions
 		(id, account_id, category_id, type, amount, description, date, is_active, created_at, updated_at)
@@ -119,7 +124,11 @@ func (r *TransactionRepository) SoftDelete(ctx context.Context, id string) error
 	if err != nil {
 		return fmt.Errorf("transaction sqlite: begin: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			log.Printf("rollback: %v", err)
+		}
+	}()
 
 	// Get transaction info before deleting
 	const getQ = `SELECT account_id, type, amount FROM transactions WHERE id = ? AND is_active = 1`

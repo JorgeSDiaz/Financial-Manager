@@ -4,6 +4,7 @@ package pdf
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -54,5 +55,8 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 	w.WriteHeader(http.StatusOK)
-	w.Write(pdfData)
+	if _, err := w.Write(pdfData); err != nil {
+		log.Printf("write pdf response: %v", err)
+		return
+	}
 }

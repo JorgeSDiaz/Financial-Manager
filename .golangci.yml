@@ -17,9 +17,3 @@ issues:
     - path: testdata
       linters:
         - errcheck
-    - path: handlers/
-      linters:
-        - errcheck
-    - path: platform/
-      linters:
-        - errcheck
