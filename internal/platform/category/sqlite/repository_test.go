@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -157,4 +158,48 @@ func TestCategoryRepository_HasTransactions(t *testing.T) {
 	hasTrans, err := repo.HasTransactions(ctx, "any-id")
 	require.NoError(t, err)
 	assert.False(t, hasTrans)
+}
+
+func TestCategoryRepository_List_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := categorysqlite.NewCategoryRepository(db)
+	_, err = repo.List(context.Background(), nil)
+	require.Error(t, err)
+}
+
+func TestCategoryRepository_Update_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := categorysqlite.NewCategoryRepository(db)
+	err = repo.Update(context.Background(), domaincategory.Category{ID: "test"})
+	require.Error(t, err)
+}
+
+func TestCategoryRepository_Delete_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := categorysqlite.NewCategoryRepository(db)
+	err = repo.Delete(context.Background(), "test")
+	require.Error(t, err)
+}
+
+func TestCategoryRepository_CountAll_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := categorysqlite.NewCategoryRepository(db)
+	_, err = repo.CountAll(context.Background())
+	require.Error(t, err)
 }

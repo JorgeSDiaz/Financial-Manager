@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -118,4 +119,37 @@ func TestAccountRepository_HasTransactions_ReturnsFalse(t *testing.T) {
 	has, err := repo.HasTransactions(context.Background(), "any-id")
 	require.NoError(t, err)
 	assert.False(t, has)
+}
+
+func TestAccountRepository_List_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := accountsqlite.NewAccountRepository(db)
+	_, err = repo.List(context.Background())
+	require.Error(t, err)
+}
+
+func TestAccountRepository_Update_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := accountsqlite.NewAccountRepository(db)
+	err = repo.Update(context.Background(), domainaccount.Account{ID: "test"})
+	require.Error(t, err)
+}
+
+func TestAccountRepository_Delete_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := accountsqlite.NewAccountRepository(db)
+	err = repo.Delete(context.Background(), "test")
+	require.Error(t, err)
 }
