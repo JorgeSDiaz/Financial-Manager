@@ -125,10 +125,16 @@ func (r *AccountRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// HasTransactions always returns false in M2 — transactions table not yet implemented.
-// TODO(M4): query the transactions table once it exists.
-func (r *AccountRepository) HasTransactions(_ context.Context, _ string) (bool, error) {
-	return false, nil
+// HasTransactions checks if the account has any active transactions.
+func (r *AccountRepository) HasTransactions(ctx context.Context, id string) (bool, error) {
+	const q = `SELECT EXISTS(SELECT 1 FROM transactions WHERE account_id = ? AND is_active = 1 LIMIT 1)`
+
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, q, id).Scan(&exists); err != nil {
+		return false, fmt.Errorf("account sqlite: has transactions: %w", err)
+	}
+
+	return exists, nil
 }
 
 // scanner abstracts *sql.Row and *sql.Rows for the shared scanAccount helper.
