@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -262,4 +263,133 @@ func TestTransactionRepository_SoftDelete_NotFound(t *testing.T) {
 	err := repo.SoftDelete(context.Background(), "missing")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, domainshared.ErrNotFound)
+}
+
+func TestTransactionRepository_ListRecent_ReturnsLimitedResults(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	require.NoError(t, buildTestAccount(db, "acc-001"))
+	require.NoError(t, buildTestCategory(db, "cat-001"))
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+	ctx := context.Background()
+
+	// Create multiple transactions with different dates
+	oldTx := buildTestTransaction("tx-1", "acc-001", domaintransaction.TransactionTypeIncome, 100.0)
+	oldTx.Date = time.Now().Add(-24 * time.Hour).Truncate(24 * time.Hour)
+	require.NoError(t, repo.Create(ctx, oldTx))
+
+	newTx := buildTestTransaction("tx-2", "acc-001", domaintransaction.TransactionTypeIncome, 200.0)
+	require.NoError(t, repo.Create(ctx, newTx))
+
+	// ListRecent should return most recent first
+	transactions, err := repo.ListRecent(ctx, 1)
+	require.NoError(t, err)
+	require.Len(t, transactions, 1)
+	assert.Equal(t, "tx-2", transactions[0].ID)
+}
+
+func TestTransactionRepository_ListRecent_ReturnsEmptySlice(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	require.NoError(t, buildTestAccount(db, "acc-001"))
+	require.NoError(t, buildTestCategory(db, "cat-001"))
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+
+	transactions, err := repo.ListRecent(context.Background(), 10)
+	require.NoError(t, err)
+	require.Empty(t, transactions)
+}
+
+func TestTransactionRepository_ListRecent_ReturnsOnlyActive(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	require.NoError(t, buildTestAccount(db, "acc-001"))
+	require.NoError(t, buildTestCategory(db, "cat-001"))
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+	ctx := context.Background()
+
+	tx := buildTestTransaction("tx-1", "acc-001", domaintransaction.TransactionTypeIncome, 100.0)
+	require.NoError(t, repo.Create(ctx, tx))
+
+	// Soft delete
+	require.NoError(t, repo.SoftDelete(ctx, "tx-1"))
+
+	// Should not appear in list
+	transactions, err := repo.ListRecent(ctx, 10)
+	require.NoError(t, err)
+	assert.Empty(t, transactions)
+}
+
+func TestTransactionRepository_ListRecent_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+	_, err = repo.ListRecent(context.Background(), 10)
+	require.Error(t, err)
+}
+
+func TestTransactionRepository_ListByType_WithDateRange(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	require.NoError(t, buildTestAccount(db, "acc-001"))
+	require.NoError(t, buildTestCategory(db, "cat-001"))
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+	ctx := context.Background()
+
+	oldTx := buildTestTransaction("tx-1", "acc-001", domaintransaction.TransactionTypeIncome, 100.0)
+	oldTx.Date = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, repo.Create(ctx, oldTx))
+
+	newTx := buildTestTransaction("tx-2", "acc-001", domaintransaction.TransactionTypeIncome, 200.0)
+	newTx.Date = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, repo.Create(ctx, newTx))
+
+	// Filter by date range
+	transactions, err := repo.ListByType(ctx, domaintransaction.TransactionTypeIncome, "", "", "2026-01-01", "")
+	require.NoError(t, err)
+	require.Len(t, transactions, 1)
+	assert.Equal(t, "tx-2", transactions[0].ID)
+}
+
+func TestTransactionRepository_ListByType_WithCategoryFilter(t *testing.T) {
+	t.Parallel()
+	db := newTestDB(t)
+	require.NoError(t, buildTestAccount(db, "acc-001"))
+	require.NoError(t, buildTestCategory(db, "cat-001"))
+	require.NoError(t, buildTestCategory(db, "cat-002"))
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+	ctx := context.Background()
+
+	tx1 := buildTestTransaction("tx-1", "acc-001", domaintransaction.TransactionTypeIncome, 100.0)
+	tx1.CategoryID = "cat-001"
+	require.NoError(t, repo.Create(ctx, tx1))
+
+	tx2 := buildTestTransaction("tx-2", "acc-001", domaintransaction.TransactionTypeIncome, 200.0)
+	tx2.CategoryID = "cat-002"
+	require.NoError(t, repo.Create(ctx, tx2))
+
+	// Filter by category
+	transactions, err := repo.ListByType(ctx, domaintransaction.TransactionTypeIncome, "", "cat-001", "", "")
+	require.NoError(t, err)
+	require.Len(t, transactions, 1)
+	assert.Equal(t, "cat-001", transactions[0].CategoryID)
+}
+
+func TestTransactionRepository_ListByType_QueryError(t *testing.T) {
+	t.Parallel()
+	db, err := sql.Open("sqlite", "file:?mode=invalid")
+	require.NoError(t, err)
+	defer db.Close()
+
+	repo := transactionsqlite.NewTransactionRepository(db)
+	_, err = repo.ListByType(context.Background(), domaintransaction.TransactionTypeIncome, "", "", "", "")
+	require.Error(t, err)
 }
