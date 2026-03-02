@@ -4,6 +4,7 @@ package export
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -47,7 +48,10 @@ func (h *Handler) HandleCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(csvData))
+	if _, err := w.Write([]byte(csvData)); err != nil {
+		log.Printf("write csv response: %v", err)
+		return
+	}
 }
 
 // HandleJSON processes GET /api/v1/export/json.
@@ -62,5 +66,8 @@ func (h *Handler) HandleJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonData)
+	if _, err := w.Write(jsonData); err != nil {
+		log.Printf("write json response: %v", err)
+		return
+	}
 }

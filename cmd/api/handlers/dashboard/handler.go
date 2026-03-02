@@ -4,6 +4,7 @@ package dashboard
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	appDashboard "github.com/financial-manager/api/internal/application/dashboard"
@@ -105,7 +106,9 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("encode response: %v", err)
+	}
 }
 
 // writeError writes an error response.
