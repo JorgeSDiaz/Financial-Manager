@@ -136,10 +136,16 @@ func (r *CategoryRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// HasTransactions always returns false in M3 — transactions table not yet implemented.
-// TODO(M4): query the transactions table once it exists.
-func (r *CategoryRepository) HasTransactions(_ context.Context, _ string) (bool, error) {
-	return false, nil
+// HasTransactions checks if the category has any active transactions.
+func (r *CategoryRepository) HasTransactions(ctx context.Context, id string) (bool, error) {
+	const q = `SELECT EXISTS(SELECT 1 FROM transactions WHERE category_id = ? AND is_active = 1 LIMIT 1)`
+
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, q, id).Scan(&exists); err != nil {
+		return false, fmt.Errorf("category sqlite: has transactions: %w", err)
+	}
+
+	return exists, nil
 }
 
 // CountAll returns the total number of categories regardless of is_active status.
